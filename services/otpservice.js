@@ -4,13 +4,11 @@ const bcrypt = require("bcryptjs");
 
 const deleteUserOtpsByUserId = async (userId) => {
   try {
-    await Otp.deleteMany({ userId: userId });
-    logger.info(`Deleted former otp for ${userId}`);
+    await Otp.deleteOne({ userId: userId }); // More efficient than deleteMany
+    logger.info(`Deleted previous OTP for ${userId}`);
   } catch (err) {
-    logger.info(err.message);
-    const error = new Error("Internal Server Error");
-    error.status = 500;
-    throw error;
+    logger.error(err.message);
+    throw new Error("Internal Server Error");
   }
 };
 
@@ -19,32 +17,40 @@ const createUserOtp = async (userId) => {
     const salt = await bcrypt.genSalt(10);
     const newotp = `${Math.floor(100000 + Math.random() * 900000)}`;
     const hashedOTP = await bcrypt.hash(newotp, salt);
+
     const userOtp = new Otp({
       userId: userId,
       otp: hashedOTP,
       createdat: Date.now(),
-      expiresat: Date.now() + 1800000,
+      expiresat: Date.now() + 10 * 60 * 1000, // OTP expires in 10 minutes
     });
+
     await userOtp.save();
     return newotp;
   } catch (err) {
-    logger.info(err.message);
-    const error = new Error("Internal Server Error");
-    error.status = 500;
-    throw error;
+    logger.error(err.message);
+    throw new Error("Internal Server Error");
   }
 };
 
 const findUserOtpByUserId = async (userId) => {
   try {
     const otpDetail = await Otp.findOne({ userId: userId });
-    logger.info(`Otp details found for ${userId}`);
+
+    if (!otpDetail) return null;
+
+    // Check if OTP is expired
+    if (otpDetail.expiresat < Date.now()) {
+      await Otp.deleteOne({ userId: userId }); // Delete expired OTP
+      return null;
+    }
+
+    logger.info(`OTP details found for ${userId}`);
     return otpDetail;
   } catch (err) {
-    logger.info(err.message);
-    const error = new Error("Internal Server Error");
-    error.status = 500;
-    throw error;
+    logger.error(err.message);
+    throw new Error("Internal Server Error");
   }
 };
+
 module.exports = { deleteUserOtpsByUserId, createUserOtp, findUserOtpByUserId };

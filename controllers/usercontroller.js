@@ -6,224 +6,183 @@ const logger = require("../utils/logger");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const config = require("../utils/config");
-const referralServices = require("../services/referralServices");
-const ReferralCode = require("../models/referralModel");
-const smsServices = require("../services/smsservices");
-// const cloudinary = require("cloudinary").v2;
+const Feedback = require("../models/feedbackmodel");
 
-// const contact = async (req, res, next) => {
-//   const { firstname, lastname, email, phonenumber, content } = req.body;
-//   try {
-//     let emailbody = "Firstname: " + firstname + "\n";
-//     emailbody = emailbody + "Lastname: " + lastname + "\n";
-//     emailbody = emailbody + "Phone Number: " + phonenumber + "\n";
-//     emailbody = emailbody + "Email: " + email + "\n";
-//     emailbody = emailbody + "\n" + content;
-//     await emailServices.sendEmail(
-//       "infodiarydove@gmail.com",
-//       (subject = "Customer's FeedBack"),
-//       (reminderText = emailbody),
-//       (htmltext = "")
-//     );
-//     return res.status(200).json({
-//       status: "success",
-//       message: "Feedback successfully logged",
-//     });
-//   } catch (err) {
-//     logger.error("Customers Feedback:", err);
-//     next(err);
-//   }
-// };
-
-// Signup New User
-
-const signup = async (req, res, next) => {
-  const { phonenumber, email, firstname, lastname, birthDate, referralCode } =
-    req.body;
-
+const contact = async (req, res, next) => {
   try {
-    // Check if the email already exists
-    let user = await userServices.findUserByOne("email", email);
-    if (user !== null && user.email !== null) {
+    const { fullName, emailAddress, subject, message } = req.body;
+
+    // Validate required fields
+    if (!fullName || !emailAddress || !subject || !message) {
       return res.status(400).json({
         status: "error",
-        message: "Email already exists",
+        message: "All fields are required",
       });
     }
 
-    // Check if the phonenumber already exists
-    user = await userServices.findUserByOne("phonenumber", phonenumber);
-    if (user !== null && user.phonenumber !== null) {
-      return res.status(400).json({
-        status: "error",
-        message: "Phonenumber is already taken",
-      });
-    }
-
-    // Handle the referral code if provided
-    if (referralCode) {
-      const referral = await referralServices.findReferralCodeByUserId(
-        referralCode
-      );
-      if (referral) {
-        // Update referral data, e.g., increment referral count, associate user with referrer, etc.
-        await referralServices.processReferral(referralCode);
-      } else {
-        return res.status(400).json({
-          status: "error",
-          message: "Invalid referral code",
-        });
-      }
-    }
-
-    // Create a new user
-    user = await userServices.createUser({
-      email,
-      phonenumber,
-      firstname,
-      lastname,
-      birthDate,
+    // Store feedback in the database
+    const newFeedback = new Feedback({
+      fullName,
+      emailAddress,
+      subject,
+      message,
     });
+    await newFeedback.save();
 
-    // Generate and save a referral code for the new user
-    const newReferralCode = await referralServices.createReferralCode(user._id);
+    // Construct email body
+    const emailBody = `
+      Full Name: ${fullName}
+      Email Address: ${emailAddress}
 
-    // Delete any existing OTPs for the user and create a new one
-    await otpServices.deleteUserOtpsByUserId(user._id);
-    const otp = await otpServices.createUserOtp(user._id);
+      Message:
+      ${message}
+    `;
 
-    // Send the OTP to the user's email
-    await emailServices.sendOtpEmail(email, otp);
-    console.log(otp);
+    // Send email
+    await emailServices.sendEmail(
+      "yctcscrepository@gmail.com",
+      subject,
+      emailBody
+    );
 
-    // Send the OTP to user's phone via SMS
-    await smsServices.sendOtpSMS(phonenumber, otp);
-
-    // Respond with success status
-    res.status(200).json({
-      status: "PENDING",
-      message: "Verification OTP sent",
-      data: { email, referralCode: newReferralCode }, // Include the new referral code in the response
+    return res.status(200).json({
+      status: "success",
+      message: "Feedback successfully logged and stored",
     });
   } catch (err) {
-    if (err.message != "Invalid referral code") {
-      try {
-        referralServices.processReversal(referralCode);
-      } catch (err) {
-        logger.error("Authentication/Signup/token:", err);
-        next(err);
-      }
-    }
-    if (err.message != "Internal Server Error") {
-      logger.error("Authentication/Signup:", err);
-    }
+    logger.error("Customers Feedback:", err);
     next(err);
   }
 };
 
-// Verify OTP
-const verify = async (req, res, next) => {
+// Signup New User
+const signup = async (req, res) => {
   try {
-    let { phonenumber, email, otp } = req.body;
+    const { studentStaffID, email, password, confirmPassword } = req.body;
 
-    // Check if either email or phone number is provided
-    if (!email && !phonenumber) {
-      return res.status(400).json({
-        status: "error",
-        message: "Please provide either email or phone number",
-      });
+    // Validate input
+    if (!studentStaffID || !email || !password || !confirmPassword) {
+      return res.status(400).json({ message: "All fields are required." });
     }
 
-    let user;
-    // Check by email if provided
-    if (email) {
-      user = await userServices.findUserByOne("email", email);
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match." });
     }
 
-    // Check by phone number if provided and no email was provided
-    if (phonenumber && !user) {
-      user = await userServices.findUserByOne("phonenumber", phonenumber);
+    // Check if user already exists (by studentStaffID or email)
+    const existingUser = await userServices.findUserByOne("$or", [
+      { studentStaffID },
+      { email },
+    ]);
+
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists." });
     }
 
-    if (!user) {
-      return res.status(404).json({
-        status: "error",
-        message: "User does not exist, please re-route to sign-up page",
-      });
-    }
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    const userotprecord = await otpServices.findUserOtpByUserId(user._id);
-
-    if (!userotprecord) {
-      return res.status(404).json({
-        status: "error",
-        message: "User has already been verified, please log in",
-      });
-    }
-
-    const hashedotp = userotprecord.otp;
-    const expiresat = userotprecord.expiresat;
-
-    if (expiresat < Date.now()) {
-      await otpServices.deleteUserOtpsByUserId(user._id);
-      return res.status(404).json({
-        status: "error",
-        message: "OTP has expired",
-      });
-    }
-
-    const validotp = await bcrypt.compare(otp, hashedotp);
-    if (!validotp) {
-      return res.status(404).json({
-        status: "error",
-        message: "Invalid OTP",
-      });
-    }
-
-    // OTP is valid, update user verification status and delete OTP record
-    await userServices.updateUserByOne(user._id);
-    await otpServices.deleteUserOtpsByUserId(user._id); // Ensure OTP record is deleted
-
-    logger.info(`Verification successful for ${email ? email : phonenumber}`);
-    return res.status(200).json({
-      status: "success",
-      message: `${email ? "Email" : "Phone number"} verified successfully`,
+    // Create user (isVerified: false)
+    const newUser = await userServices.createUser({
+      studentStaffID,
+      email,
+      password: hashedPassword,
+      isVerified: false,
     });
-  } catch (err) {
-    logger.error("Authentication/Verify:", err);
-    next(err);
+
+    // Generate OTP
+    const otp = `${Math.floor(100000 + Math.random() * 900000)}`; // 6-digit OTP
+
+    // Store hashed OTP in database
+    await otpServices.createUserOtp(newUser._id, otp);
+
+    // Send OTP to user's email
+    await emailServices.sendOtpEmail(email, otp);
+
+    return res.status(201).json({
+      message: "Signup successful. Please verify your email with the OTP sent.",
+    });
+  } catch (error) {
+    console.error("Signup Error:", error);
+    res.status(500).json({ message: "Internal Server Error." });
+  }
+};
+
+// Verify OTP
+const verifyOtp = async (req, res) => {
+  try {
+    const { studentStaffID, otp } = req.body;
+
+    // Validate input
+    if (!studentStaffID || !otp) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    // Find user by studentStaffID
+    const user = await userServices.findUserByOne(
+      "studentStaffID",
+      studentStaffID
+    );
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Find OTP record
+    const otpRecord = await otpServices.findUserOtpByUserId(user._id);
+    if (!otpRecord) {
+      return res.status(400).json({ message: "Invalid or expired OTP." });
+    }
+
+    // Check OTP expiration
+    if (Date.now() > otpRecord.expiresat) {
+      await otpServices.deleteUserOtpsByUserId(user._id); // Remove expired OTP
+      return res
+        .status(400)
+        .json({ message: "OTP expired. Request a new one." });
+    }
+
+    // Compare OTP
+    const isOtpValid = await bcrypt.compare(otp, otpRecord.otp);
+    if (!isOtpValid) {
+      return res.status(400).json({ message: "Incorrect OTP." });
+    }
+
+    // Update user as verified
+    await userServices.updateUserByOne(user._id);
+
+    // Delete OTP after successful verification
+    await otpServices.deleteUserOtpsByUserId(user._id);
+
+    return res.status(200).json({ message: "Email verified successfully." });
+  } catch (error) {
+    console.error("OTP Verification Error:", error);
+    res.status(500).json({ message: "Internal Server Error." });
   }
 };
 
 // Resend OTP
 const resendOTPCode = async (req, res, next) => {
   try {
-    let { email, phonenumber } = req.body;
+    const { studentStaffID } = req.body;
 
-    // Check if either email or phone number is provided
-    if (!email && !phonenumber) {
+    // Validate input
+    if (!studentStaffID) {
       return res.status(400).json({
         status: "error",
-        message: "Please provide either email or phone number",
+        message: "Student/Staff ID is required.",
       });
     }
 
-    let user;
-
-    // Check by email if provided
-    if (email) {
-      user = await userServices.findUserByOne("email", email);
-    }
-
-    // Check by phone number if provided and no email was provided
-    if (phonenumber && !user) {
-      user = await userServices.findUserByOne("phonenumber", phonenumber);
-    }
-
+    // Find user by studentStaffID
+    const user = await userServices.findUserByOne(
+      "studentStaffID",
+      studentStaffID
+    );
     if (!user) {
       return res.status(404).json({
         status: "error",
-        message: "User has no records",
+        message: "User not found.",
       });
     }
 
@@ -231,108 +190,92 @@ const resendOTPCode = async (req, res, next) => {
     await otpServices.deleteUserOtpsByUserId(user._id);
 
     // Generate a new OTP
-    let otp = await otpServices.createUserOtp(user._id);
+    const otp = await otpServices.createUserOtp(user._id);
 
-    // Send the OTP based on whether it's an email or phone number
-    if (email) {
-      await emailServices.sendOtpEmail(user.email, otp);
-      logger.info(`OTP sent to email: ${user.email}`);
-    }
-    //  else if (phonenumber) {
-    //   await smsServices.sendOtpSms(user.phonenumber, otp); // Assuming you have an SMS service
-    //   logger.info(`OTP sent to phone number: ${user.phonenumber}`);
-    // }
+    // Send OTP via email
+    await emailServices.sendOtpEmail(user.email, otp);
+    logger.info(`OTP resent to email: ${user.email}`);
 
     return res.status(200).json({
       status: "success",
-      message: "OTP sent successfully",
-      data: { contact: email ? email : phonenumber },
+      message: "OTP sent successfully. Check your email.",
     });
   } catch (err) {
-    logger.error("Authentication/ResendOTP:", err);
+    logger.error("Error in ResendOTP:", err);
     next(err);
   }
 };
 
 // Login User
 const login = async (req, res, next) => {
-  const { phonenumber, email } = req.body;
-
   try {
-    // Ensure either phone number or email is provided
-    if (!phonenumber && !email) {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
       return res.status(400).json({
         status: "error",
-        message: "Please provide either phone number or email",
+        message: "Email and password are required",
       });
     }
 
-    let user;
-    // Find user by email or phone number
-    if (email) {
-      user = await userServices.findUserByOne("email", email);
-    } else if (phonenumber) {
-      user = await userServices.findUserByOne("phonenumber", phonenumber);
-    }
-
+    // Find user by email
+    const user = await userServices.findUserByOne("email", email);
     if (!user) {
       return res.status(404).json({
         status: "error",
-        message: "User not found",
+        message: "User not found. Please check your email",
       });
     }
 
-    // Check if the user is verified
-    if (!user.verified) {
-      return res.status(400).json({
+    // Check if password is correct
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
         status: "error",
-        message: "User not verified",
+        message: "Invalid password",
       });
     }
 
-    // Generate and send OTP
-    let otp = await otpServices.createUserOtp(user._id);
-
-    if (email) {
-      await emailServices.sendOtpEmail(user.email, otp);
-      console.log(otp);
-      logger.info(`OTP sent to email: ${user.email}`);
-    } else if (phonenumber) {
-      await smsServices.sendOtpSMS(user.phonenumber, otp);
-      logger.info(`OTP sent to phone number: ${user.phonenumber}`);
+    // Check if the user has verified their email
+    if (!user.isVerified) {
+      return res.status(403).json({
+        status: "error",
+        message:
+          "Email not verified. Please verify your email before logging in.",
+      });
     }
 
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      config.JWT_SECRET,
+      { expiresIn: "7d" } // Token expires in 7 days
+    );
+
+    // Return success response with token
     return res.status(200).json({
       status: "success",
-      message: "OTP sent successfully",
-      data: { contact: email ? email : phonenumber },
+      message: "Login successful",
+      data: {
+        token,
+        user: {
+          id: user._id,
+          email: user.email,
+          isVerified: user.isVerified,
+        },
+      },
     });
   } catch (err) {
-    logger.error("Authentication/Login:", err);
+    console.error("Error in login function:", err);
     next(err);
   }
 };
 
-// Verify Login OTP
-const verifyOtpLogin = async (req, res, next) => {
-  const { phonenumber, email, otp } = req.body;
-
+//Get Users Personalinfo ?? working
+const personalInfo = async (req, res, next) => {
   try {
-    // Ensure either phone number or email is provided
-    if (!phonenumber && !email) {
-      return res.status(400).json({
-        status: "error",
-        message: "Please provide either phone number or email",
-      });
-    }
-
-    let user;
-    // Find user by email or phone number
-    if (email) {
-      user = await userServices.findUserByOne("email", email);
-    } else if (phonenumber) {
-      user = await userServices.findUserByOne("phonenumber", phonenumber);
-    }
+    const user = await userServices.findUserByOne("_id", req.user.id);
 
     if (!user) {
       return res.status(404).json({
@@ -341,27 +284,121 @@ const verifyOtpLogin = async (req, res, next) => {
       });
     }
 
-    // Retrieve the OTP record
-    const userOtpRecord = await otpServices.findUserOtpByUserId(user._id);
+    return res.status(200).json({
+      status: "success",
+      message: "User data successfully retrieved",
+      data: {
+        studentStaffID: user.studentStaffID,
+        email: user.email,
+        department: user.department,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (err) {
+    logger.error("Settings/personalInfo: ", err);
+    next(err);
+  }
+};
 
-    if (!userOtpRecord) {
-      return res.status(400).json({
+// Update user personalinfo
+const updatePersonalInfo = async (req, res, next) => {
+  const { department } = req.body; // Only department can be updated
+  try {
+    let user = await userServices.findUserById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
         status: "error",
-        message: "No OTP found or OTP already used/expired",
+        message: "User not found",
       });
     }
 
-    // Check OTP expiration
-    if (userOtpRecord.expiresat < Date.now()) {
-      await otpServices.deleteUserOtpsByUserId(user._id);
+    // Update department if provided
+    user.department = department || user.department;
+
+    await user.save();
+
+    return res.status(200).json({
+      status: "success",
+      message: "User details successfully updated",
+    });
+  } catch (err) {
+    logger.error("Settings/updatePersonalInfo: ", err);
+    next(err);
+  }
+};
+
+//change user email
+const changeEmail = async (req, res, next) => {
+  const { email } = req.body;
+
+  try {
+    // Check if the new email is already taken
+    const existingUser = await userServices.findUserByOne("email", email);
+    if (existingUser) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email already exists",
+      });
+    }
+
+    // Find the authenticated user
+    const user = await userServices.findUserByOne("_id", req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found",
+      });
+    }
+
+    // Mark user as unverified and update email
+    user.verified = false;
+    user.email = email;
+    await user.save();
+
+    // Delete old OTPs and send a new OTP
+    await otpServices.deleteUserOtpsByUserId(user._id);
+    const otp = await otpServices.createUserOtp(user._id);
+    await emailServices.sendOtpEmail(email, otp);
+
+    return res.status(200).json({
+      status: "success",
+      message: "OTP successfully sent",
+      data: { email },
+    });
+  } catch (err) {
+    logger.error("user/changeEmail: ", err);
+    next(err);
+  }
+};
+
+//verify new user email
+const verifyNewMail = async (req, res, next) => {
+  const { otp } = req.body;
+
+  try {
+    const userOtpRecord = await otpServices.findUserOtpByUserId(req.user.id);
+    if (!userOtpRecord) {
+      return res.status(403).json({
+        status: "error",
+        message: "Restricted access to user",
+      });
+    }
+
+    const { otp: hashedOtp, expiresat } = userOtpRecord;
+
+    // Check if OTP has expired
+    if (Date.now() > expiresat) {
+      await otpServices.deleteUserOtpsByUserId(req.user.id);
       return res.status(400).json({
         status: "error",
         message: "OTP has expired",
       });
     }
 
-    // Verify OTP
-    const validOtp = await bcrypt.compare(otp, userOtpRecord.otp);
+    // Validate OTP
+    const validOtp = await bcrypt.compare(otp, hashedOtp);
     if (!validOtp) {
       return res.status(400).json({
         status: "error",
@@ -369,213 +406,27 @@ const verifyOtpLogin = async (req, res, next) => {
       });
     }
 
-    // OTP is valid, log in the user
-    await otpServices.deleteUserOtpsByUserId(user._id); // Clean up OTP after successful verification
-    const token = jwt.sign({ userId: user._id }, config.SECRET, {
-      expiresIn: "10000h",
-    });
-    const refreshtoken = jwt.sign({ userId: user._id }, config.SECRET, {
-      expiresIn: "10000h",
-    });
-    // await redisService.setArray(user._id.toString(), [token, refreshtoken]);
+    // Mark user as verified
+    await userServices.updateUserByOne(req.user.id);
 
-    logger.info(`User ${user.firstnam} has been successfully signed in.`);
-    return res.status(200).json({
-      status: "success",
-      message: "User signed in successfully",
-      data: [
-        { token: token },
-        { firstname: user.firstname },
-        { lastname: user.lastname },
-        { phonenumber: user.phonenumber },
-        { email: user.email },
-      ],
-    });
-  } catch (err) {
-    logger.error("Authentication/VerifyOTPLogin:", err);
-    next(err);
-  }
-};
+    // Delete OTP record after successful verification
+    await otpServices.deleteUserOtpsByUserId(req.user.id);
 
-//change personal settings
-
-//Get Users Personalinfo ?? working
-const personalinfo = async (req, res) => {
-  try {
-    const user = await userServices.findUserByOne("_id", req.userId);
-    return res.status(200).json({
-      status: "success",
-      message: "User data successfully retrieved",
-      data: [
-        { firstname: user.firstname },
-        { lastname: user.lastname },
-        { email: user.email },
-        { phonenumber: user.phonenumber },
-        { birthDate: user.birthDate },
-        { referralCode: user.referralCode },
-        { verified: user.verified },
-        { phoneverified: user.phoneverified },
-        { profilePicture: user.profilePicture },
-      ],
-    });
-  } catch (err) {
-    logger.error("Settings/personalinfo: ", err);
-    next(err);
-  }
-};
-
-// Upoad Profile picture
-const profilePicture = async (req, res) => {
-  try {
-    const user = await userServices.findUserByOne("_id", req.userId);
-    if (!user) {
-      return res.status(404).json({
-        status: "error",
-        message: "User not found",
-      });
-    }
-    user.profilePicture = req.file.path; // Cloudinary file path
-    await user.save();
-    res.status(200).json({
-      status: "success",
-      message: "Profile picture successfully uploaded",
-      data: {
-        profilePicture: user.profilePicture,
-      },
-    });
-  } catch (err) {
-    logger.error("Settings/profilePicture: ", err);
-    if (err.status != 500) {
-      err.status = 500;
-    }
-    next(err);
-  }
-};
-
-// Delete Profile picture
-const profilePictureDelete = async (req, res) => {
-  try {
-    const user = await userServices.findUserByOne("_id", req.userId);
-    if (!user) {
-      return res.status(404).json({
-        status: "error",
-        message: "User not found",
-      });
-    }
-    if (user.profilePicture) {
-      await cloudinary.uploader.destroy(user.profilePicture);
-    }
-    user.profilePicture = null; // Cloudinary file path
-    await user.save();
-    res.status(200).json({
-      status: "success",
-      message: "Profile picture successfully deleted",
-      data: {
-        profilePicture: user.profilePicture,
-      },
-    });
-  } catch (err) {
-    logger.error("Settings/profilePictureDelete: ", err);
-    if (err.status != 500) {
-      err.status = 500;
-    }
-    next(err);
-  }
-};
-
-// Update user personalinfo
-const updatepersonalinfo = async (req, res, next) => {
-  const { firstname, lastname } = req.body;
-  try {
-    let user = await userServices.findUserByOne("_id", req.userId);
-
-    // Update user details if provided
-    user.firstname = firstname || user.firstname;
-    user.lastname = lastname || user.lastname;
-
-    await user.save();
-
-    return res.status(200).json({
-      status: "success",
-      message: "User details successfully edited",
-    });
-  } catch (err) {
-    logger.error("user/setup: ", err);
-    next(err);
-  }
-};
-
-//change user email
-const changeemail = async (req, res) => {
-  const { email } = req.body;
-  try {
-    let user = await userServices.findUserByOne("email", email);
-    if (user) {
-      return res.status(400).json({
-        status: "error",
-        message: "Email already exists",
-      });
-    }
-    user = await userServices.findUserByOne("_id", req.userId);
-    user.verified = false;
-    user.email = email;
-    await user.save();
-    await otpServices.deleteUserOtpsByUserId(user._id);
-    let otp = await otpServices.createUserOtp(user._id);
-    await emailServices.sendOtpEmail(email, otp);
-    return res.status(200).json({
-      status: "success",
-      message: "OTP successfully sent",
-      data: { email },
-    });
-  } catch (err) {
-    logger.error("user/changeemail: ", err);
-    next(err);
-  }
-};
-
-//verify new user email
-const verifynewmail = async (req, res) => {
-  const { otp } = req.body;
-  try {
-    const userotprecord = await otpServices.findUserOtpByUserId(req.userId);
-    if (!userotprecord) {
-      return res.status(404).json({
-        status: "error",
-        message: "Restricted access to user",
-      });
-    }
-    const hashedotp = userotprecord.otp;
-    const expiresat = userotprecord.expiresat;
-    if (expiresat < Date.now()) {
-      await otpServices.deleteUserOtpsByUserId(req.userId);
-      return res.status(404).json({
-        status: "error",
-        message: "OTP has expired",
-      });
-    }
-    const validotp = await bcrypt.compare(otp, hashedotp);
-    if (!validotp) {
-      return res.status(404).json({
-        status: "error",
-        message: "Invalid OTP",
-      });
-    }
-    await userServices.updateUserByOne(req.userId);
-    await otpServices.deleteUserOtpsByUserId(req.userId);
     return res.status(200).json({
       status: "success",
       message: "User email verified successfully",
     });
   } catch (err) {
-    logger.error("user/changeemail/verify: ", err);
+    logger.error("user/changeEmail/verify: ", err);
     next(err);
   }
 };
 
-const logout = async (req, res) => {
+//Logout Users
+const logout = async (req, res, next) => {
   try {
-    await redisService.delArray(req.userId);
+    await redisService.delArray(req.user.id);
+
     return res.status(200).json({
       status: "success",
       message: "User successfully logged out",
@@ -588,16 +439,13 @@ const logout = async (req, res) => {
 
 module.exports = {
   signup,
-  verify,
+  verifyOtp,
   resendOTPCode,
   login,
-  verifyOtpLogin,
   logout,
-  personalinfo,
-  profilePicture,
-  profilePictureDelete,
-  updatepersonalinfo,
-  changeemail,
-  verifynewmail,
-  //   contact,
+  personalInfo,
+  updatePersonalInfo,
+  changeEmail,
+  verifyNewMail,
+  contact,
 };

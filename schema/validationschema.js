@@ -1,58 +1,42 @@
 const Joi = require("joi");
 
 const signupSchema = Joi.object({
-  firstname: Joi.string().min(3).max(50).required(),
-  lastname: Joi.string().min(3).max(50).required(),
+  studentStaffID: Joi.string().required(),
   email: Joi.string().email().required(),
-  phonenumber: Joi.string()
-    .pattern(/^(\+|0)[1-9]\d{1,14}$/)
-    .message("Phone number must be in a valid international format")
-    .required(),
-  birthDate: Joi.string()
-    .pattern(/^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/)
-    .message("Birthdate must be in MM-DD format (e.g., 08-28)")
-    .required(),
-  referralCode: Joi.string().min(6).max(20).alphanum().optional(),
+  password: Joi.string().min(8).required(),
+  confirmPassword: Joi.string()
+    .valid(Joi.ref("password"))
+    .required()
+    .messages({ "any.only": "Passwords do not match" }),
 });
 
 const verifyOTPSchema = Joi.object({
-  email: Joi.string().email().optional(),
-  phonenumber: Joi.string()
-    .pattern(/^(\+|0)[1-9]\d{1,14}$/)
-    .message("Phone number must be in a valid international format")
-    .optional(),
-  otp: Joi.string().max(6).required().messages({
-    "any.only": "Invalid OTP",
+  studentStaffID: Joi.string().optional(),
+  otp: Joi.string().length(6).required().messages({
+    "string.length": "OTP must be exactly 6 characters",
   }),
 });
 
 const resendOTPSchema = Joi.object({
-  email: Joi.string().email().required(),
+  studentStaffID: Joi.string().required(),
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().default("null"),
-  phonenumber: Joi.string()
-    .pattern(/^(\+|0)[1-9]\d{1,14}$/)
-    .message({
-      "string.pattern.base":
-        "Phone number must be a valid international format",
-    })
-    .default("null"),
-});
-
-const personalInfoSchema = Joi.object({
-  firstname: Joi.string().min(3).max(50).required(),
-  lastname: Joi.string().min(3).required(),
+  email: Joi.string().email().optional(),
+  password: Joi.string().min(6).required(),
 });
 
 const changeemailSchema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string().email().required().messages({
+    "string.email": "Invalid email format",
+    "any.required": "Email is required",
+  }),
 });
 
 const verifynewmail = Joi.object({
   otp: Joi.string().max(6).required().messages({
-    "any.only": "Invalid OTP",
+    "string.max": "OTP must not exceed 6 characters",
+    "any.required": "OTP is required",
   }),
 });
 
@@ -61,7 +45,6 @@ module.exports = {
   verifyOTPSchema,
   resendOTPSchema,
   loginSchema,
-  personalInfoSchema,
   changeemailSchema,
   verifynewmail,
 };

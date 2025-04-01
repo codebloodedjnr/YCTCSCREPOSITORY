@@ -1,14 +1,14 @@
 {
-  "name": "rushboxbackend",
+  "name": "YCTCSCREPOSITORY",
   "version": "1.0.0",
-  "description": "\"Gain access to over 3,000 couriers,see their pricing,reviews and more in one platform\" ",
+  "description": "\"A Centralised Repository for Yabatech Computer Science Department\" ",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
     "dev": " nodemon  index.js"
   },
-  "author": "\"Rushboxng\"",
+  "author": "\"Codebloodedjnr\"",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.7.7",
@@ -17,16 +17,17 @@
     "body-parser": "^1.20.2",
     "cloudinary": "^2.4.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.4.7",
     "express": "^4.19.2",
     "express-async-errors": "^3.1.1",
-    "imap-simple": "^5.1.0",
+    "imap-simple": "^1.6.3",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "logger": "^0.0.1",
-    "mongodb": "^6.8.0",
-    "mongoose": "^8.5.3",
+    "mongodb": "^6.15.0",
+    "mongoose": "^8.13.1",
     "nodemailer": "^6.9.14",
     "nodemon": "^3.1.4"
-  }
+  },
+  "keywords": []
 }

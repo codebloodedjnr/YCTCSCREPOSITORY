@@ -1,18 +1,16 @@
 const mongoose = require("mongoose");
-// const bcrypt = require("bcryptjs");
 
-const UserSchema = new mongoose.Schema({
-  //More input needed like name and all
-  firstname: { type: String },
-  lastname: { type: String },
-  email: { type: String, default: null },
-  phonenumber: { type: String, default: null },
-  verified: { type: Boolean, default: false },
-  phoneverified: { type: Boolean, default: false },
-  profilePicture: { type: String },
+const userSchema = new mongoose.Schema({
+  studentStaffID: { type: String, required: true, unique: true }, // Unique ID for students & staff
+  email: { type: String, required: true, unique: true }, // Email for login
+  password: { type: String, required: true }, // Hashed password storage
+  department: { type: String, default: "Computer Science" }, // Default department
+  isVerified: { type: Boolean, default: false }, // Field to track manual verification by admin
+  createdAt: { type: Date, default: Date.now }, // Timestamp for user creation
 });
 
-UserSchema.set("toJSON", {
+// Convert _id to id and remove unnecessary fields when returning JSON
+userSchema.set("toJSON", {
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString();
     delete returnedObject._id;
@@ -20,4 +18,4 @@ UserSchema.set("toJSON", {
   },
 });
 
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.model("User", userSchema);

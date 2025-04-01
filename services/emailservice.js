@@ -1,8 +1,19 @@
-const logger = require("../utils/logger");
 const nodemailer = require("nodemailer");
+const logger = require("../utils/logger");
 const config = require("../utils/config");
 
-// Send Emails
+// Configure Transporter (Initialized Once)
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: config.EMAIL_USER,
+    pass: config.EMAIL_PASS,
+  },
+});
+
+// Generic Email Sending Function
 const sendEmail = async (
   userEmail,
   subject = "Verify your OTP",
@@ -10,60 +21,39 @@ const sendEmail = async (
 ) => {
   try {
     const mailOptions = {
-      from: config.EMAIL_USER,
+      from: `"YCTCSCREPO" <${config.EMAIL_USER}>`,
       to: userEmail,
       subject: subject,
       html: htmltext,
     };
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: config.EMAIL_USER,
-        pass: config.EMAIL_PASS,
-      },
-    });
-
-    await transporter.sendMail(mailOptions);
-    logger.info("Email successfully sent");
+    const info = await transporter.sendMail(mailOptions);
+    logger.info(`Email successfully sent to ${userEmail}: ${info.messageId}`);
   } catch (err) {
-    logger.error("Error in sending mail:", err);
-    const error = new Error("Internal Server Error");
-    error.status = 500;
-    throw error;
+    logger.error("Error sending email:", err);
+    throw new Error("Email service unavailable");
   }
 };
 
-// <img src="" alt="RushBox logo" style="width: 43px; height: 36px; display: inline;">
-
-// Function to send OTP email
-const sendOtpEmail = async (user_email, otp) => {
+// Function to Send OTP Email
+const sendOtpEmail = async (userEmail, otp) => {
   try {
-    const subject = "Verify Your Email";
+    const subject = "Verify Your Email - OTP Code";
     const html = `
       <div style="background-color: #f0f0f0; padding: 20px; max-width: 640px; margin: auto;">
-        <section style="max-width: 600px; margin: auto; background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-          <div style="display: block;">
-            
-            <h1 style="color: #086D00; display: inline;">Rushbox</h1>
-          </div>
+        <section style="background-color: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+          <h1 style="color: #086D00;">YCTCSCREPO</h1>
           <h3>Email Verification</h3>
-          <p>Your verification code is: <b>${otp}</b>. Do not share this code with anybody to ensure the safety of your account. OTP expires in 10 minutes.</p>
-          <p>Ignore this message if you have already been verified.</p>
+          <p>Your verification code is: <b>${otp}</b>. Do not share this code with anyone. OTP expires in 10 minutes.</p>
+          <p>If you did not request this, please ignore this email.</p>
         </section>
       </div>`;
 
-    // Pass the HTML content as the third argument
-    await sendEmail(user_email, subject, html);
+    await sendEmail(userEmail, subject, html);
   } catch (err) {
     logger.error("Error in sendOtpEmail:", err.message);
     throw err;
   }
 };
 
-module.exports = {
-  sendOtpEmail,
-  sendEmail,
-};
+module.exports = { sendOtpEmail, sendEmail };

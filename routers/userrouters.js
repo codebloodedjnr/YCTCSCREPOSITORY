@@ -2,15 +2,9 @@ const express = require("express");
 const validate = require("../utils/validate");
 const schema = require("../schema/validationschema");
 const userController = require("../controllers/usercontroller");
-const userrouter = express.Router();
 const middleware = require("../utils/middleware");
-// const upload = require("../utils/cloudinary");
 
-// userrouter.post(
-//   "/feedback",
-//   validate(schema.contactSchema, "body"),
-//   userController.contact
-// );
+const userrouter = express.Router();
 
 userrouter.post(
   "/signup",
@@ -21,77 +15,54 @@ userrouter.post(
 userrouter.post(
   "/verifyOTP",
   validate(schema.verifyOTPSchema, "body"),
-  userController.verify
+  userController.verifyOtp
 );
 
 userrouter.post(
   "/resendOTP",
-  validate(schema.resendOTPSchema),
+  validate(schema.resendOTPSchema, "body"),
   userController.resendOTPCode
 );
 
-userrouter.post("/login", validate(schema.loginSchema), userController.login);
-
 userrouter.post(
-  "/VerifyOTPLogin",
-  validate(schema.verifyOTPSchema, "body"),
-  userController.verifyOtpLogin
+  "/login",
+  validate(schema.loginSchema, "body"),
+  userController.login
 );
+
+userrouter.post("/logout", middleware.verifyToken, userController.logout);
 
 userrouter.get(
   "/personalinfo",
   middleware.verifyToken,
-  userController.personalinfo
+  userController.personalInfo
 );
-
-// userrouter.post(
-//   "/uploadProfilePicture",
-//   middleware.verifyToken,
-//   upload.single("profilePicture"),
-//   userController.profilePicture
-// );
-
-// userrouter.delete(
-//   "/profilePicture",
-//   middleware.verifyToken,
-//   userController.profilePictureDelete
-// );
 
 userrouter.post(
   "/personalinfo/update",
-  validate(schema.personalInfoSchema),
+  validate(schema.personalInfoSchema, "body"),
   middleware.verifyToken,
-  userController.updatepersonalinfo
+  userController.updatePersonalInfo
 );
 
 userrouter.post(
   "/personalinfo/changeemail",
-  validate(schema.changeemailSchema),
+  validate(schema.changeEmailSchema, "body"),
   middleware.verifyToken,
-  userController.changeemail
+  userController.changeEmail
 );
-
-// userrouter.post(
-//   "/personalinfo/changephonenumber",
-//   validate(schema.changePhonenumberSchema),
-//   middleware.verifyToken,
-//   whatsappController.changephonenumber
-// );
 
 userrouter.post(
   "/personalinfo/changeemail/verify",
-  validate(schema.verifynewmail),
+  validate(schema.verifyNewMailSchema, "body"),
   middleware.verifyToken,
-  userController.verifynewmail
+  userController.verifyNewMail
 );
 
-// userrouter.post(
-//   "/personalinfo/changephonenumber/verify",
-//   validate(schema.changeVerifySchema),
-//   middleware.verifyToken,
-//   whatsappController.changephonenumberverify
-// );
-
-// userrouter.post("/logout", middleware.verifyToken, userController.logout);
+userrouter.post(
+  "/contact",
+  validate(schema.contactSchema, "body"),
+  userController.contact
+);
 
 module.exports = userrouter;
