@@ -4,6 +4,8 @@ const cors = require("cors");
 const config = require("./utils/config");
 const logger = require("./utils/logger");
 const userRoutes = require("./routers/userrouters");
+const bookRoutes = require("./routers/book_router");
+const authRoutes = require("./routers/author_router");
 const middleware = require("./utils/middleware");
 
 const app = express();
@@ -22,6 +24,9 @@ app.use(express.urlencoded({ extended: false }));
 
 // Routes
 app.use("/api/users", userRoutes);
+app.use("/api/books", middleware.verifyToken, bookRoutes);
+app.use("/api/authors", middleware.verifyToken, authRoutes);
+
 app.use(middleware.errorHandler);
 app.use(middleware.unknownEndpoint);
 

@@ -1,6 +1,7 @@
 const nodemailer = require("nodemailer");
 const logger = require("../utils/logger");
 const config = require("../utils/config");
+const Users = require("../models/usermodel");
 
 // Configure Transporter (Initialized Once)
 const transporter = nodemailer.createTransport({
@@ -56,4 +57,33 @@ const sendOtpEmail = async (userEmail, otp) => {
   }
 };
 
-module.exports = { sendOtpEmail, sendEmail };
+async function sendApprovalEmailToContributors(book) {
+  const users = await Users.find({ _id: { $in: book.contributors } });
+
+  const emails = users.map(u => u.email).filter(Boolean);
+
+  const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+      user: config.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  for (const email of emails) {
+    await transporter.sendMail({
+      from: config.EMAIL_USER,
+      to: email,
+      subject: '✅ Your Book Has Been Approved!',
+      html: `
+        <p>Hi there,</p>
+        <p>Your book <strong>${book.title}</strong> has just been approved by an admin and is now available in the repository.</p>
+        <p><a href="https://yourfrontend.com/books/${book._id}">View Book</a></p>
+        <p>Thanks for sharing knowledge!</p>
+      `,
+    });
+  }
+}
+
+
+module.exports = { sendOtpEmail, sendEmail, sendApprovalEmailToContributors };

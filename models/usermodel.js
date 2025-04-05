@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
   department: { type: String, default: "Computer Science" }, // Default department
   isVerified: { type: Boolean, default: false }, // Field to track manual verification by admin
   createdAt: { type: Date, default: Date.now }, // Timestamp for user creation
+  role: { type: String, enum: ['student', 'admin', 'staff'], default: 'student' },
 });
 
 // Convert _id to id and remove unnecessary fields when returning JSON
