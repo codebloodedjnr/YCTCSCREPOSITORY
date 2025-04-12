@@ -10,10 +10,10 @@ const Feedback = require("../models/feedbackmodel");
 
 const contact = async (req, res, next) => {
   try {
-    const { fullName, emailAddress, subject, message } = req.body;
+    const { fullName, email, subject, message } = req.body;
 
     // Validate required fields
-    if (!fullName || !emailAddress || !subject || !message) {
+    if (!fullName || !email || !subject || !message) {
       return res.status(400).json({
         status: "error",
         message: "All fields are required",

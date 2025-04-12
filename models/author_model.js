@@ -7,7 +7,7 @@ const authorSchema = new mongoose.Schema({
   books: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Book',
-    required: false, // optional (this line is actually not needed unless you're being explicit)
+    required: true, // optional (this line is actually not needed unless you're being explicit)
   }],
 });
 
