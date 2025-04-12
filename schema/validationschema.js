@@ -59,13 +59,17 @@ const contactSchema = Joi.object({
   message: Joi.string().min(3).required(),
 });
 
-const createauthor = Joi.object({
+const authorSchema = Joi.object({
   name: Joi.string().min(3).required(),
-  bio: Joi.string().min(3).required(),
+  bio: Joi.string().min(3).optional().messages({
+    "message": "Mininmum of 3 characters is required"
+  }),
   email: Joi.string().email().optional().messages({
     "string.email": "Invalid email format",
   }),
-  books: Joi.array().items(Joi.string().min(1)).min(1).required().messages({}),
+  books: Joi.array().items(Joi.string().min(1)).min(1).required().messages({
+    "array.min": "At least one book is required",
+  }),
 });
 
 const bookSchema = Joi.object({
@@ -94,6 +98,6 @@ module.exports = {
   verifyNewMailSchema,
   personalInfoSchema,
   contactSchema,
-  createauthor,
+  authorSchema,
   bookSchema
 };

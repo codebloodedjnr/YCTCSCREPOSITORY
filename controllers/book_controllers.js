@@ -1,3 +1,4 @@
+const { Logger } = require('logger');
 const BookService = require('../services/book_service');
 const emailServices = require("../services/emailservice");
 

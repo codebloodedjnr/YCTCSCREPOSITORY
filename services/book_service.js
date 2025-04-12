@@ -10,15 +10,11 @@ class BookService {
   // Get a single Book by ID
   static async getBookById(id) {
     return await Book.findById(id)
-      .populate('authors')
-      .populate('contributors');
   }
 
   // Get all Books
   static async getAllBooks(filter) {
     return await Book.find(filter).populate('books')
-      .populate('authors')
-      .populate('contributors');
   }
 
   // Delete Book by ID
