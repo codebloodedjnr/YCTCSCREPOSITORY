@@ -23,7 +23,7 @@ const contact = async (req, res, next) => {
     // Store feedback in the database
     const newFeedback = new Feedback({
       fullName,
-      emailAddress,
+      emailAddress: email,
       subject,
       message,
     });
@@ -32,7 +32,7 @@ const contact = async (req, res, next) => {
     // Construct email body
     const emailBody = `
       Full Name: ${fullName}
-      Email Address: ${emailAddress}
+      Email Address: ${email}
 
       Message:
       ${message}

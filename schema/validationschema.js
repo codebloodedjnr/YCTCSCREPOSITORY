@@ -68,6 +68,19 @@ const createauthor = Joi.object({
   books: Joi.array().items(Joi.string().min(1)).min(1).required().messages({}),
 });
 
+const bookSchema = Joi.object({
+  title: Joi.string().required(),
+  description: Joi.string().required(),
+  cloudinaryUrl: Joi.string().uri().required(),
+  keywords: Joi.array().items(Joi.string()).optional(),
+  category: Joi.string().valid('OND', 'HND').required(),
+  sub_category: Joi.string().valid('PROJECTS', 'LECTURE_NOTES', 'PAST_QUESTION', 'DEPARTMENTAL_PUBLICATIONS').required(),
+  downloadCount: Joi.number().default(0).optional(),
+  file_size: Joi.number().default(0).optional(),
+  approved: Joi.boolean().default(false).optional(),
+  uploadedBy: Joi.array().items(Joi.string().length(24).hex()).required()  // assuming user IDs are ObjectIds (24 hex characters)
+});
+
 module.exports = {
   signupSchema,
   verifyOTPSchema,
@@ -78,4 +91,5 @@ module.exports = {
   personalInfoSchema,
   contactSchema,
   createauthor,
+  bookSchema
 };
