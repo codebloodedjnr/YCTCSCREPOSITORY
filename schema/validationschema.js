@@ -17,25 +17,23 @@ const verifyOTPSchema = Joi.object({
   otp: Joi.string().length(6).required().messages({
     "string.length": "OTP must be exactly 6 characters",
   }),
-}).or('studentStaffID', 'email');
+}).or("studentStaffID", "email");
 
 const resendOTPSchema = Joi.object({
   studentStaffID: Joi.string().optional(),
-  email: Joi.string().email().optional()
-}).or('studentStaffID', 'email');
+  email: Joi.string().email().optional(),
+}).or("studentStaffID", "email");
 
 const loginSchema = Joi.object({
   studentStaffID: Joi.string().optional(),
   email: Joi.string().email().optional(),
   password: Joi.string().min(6).required(),
-}).or('studentStaffID', 'email');
-
+}).or("studentStaffID", "email");
 
 const personalInfoSchema = Joi.object({
-  studentStaffID: Joi.string().optional().empty('').default(null),
+  studentStaffID: Joi.string().optional().empty("").default(null),
   department: Joi.string().optional(),
 });
-
 
 const changeEmailSchema = Joi.object({
   studentStaffID: Joi.string().optional(),
@@ -43,7 +41,7 @@ const changeEmailSchema = Joi.object({
     "string.email": "Invalid email format",
     "any.required": "Email is required",
   }),
-}).or('studentStaffID', 'email');;
+}).or("studentStaffID", "email");
 
 const verifyNewMailSchema = Joi.object({
   otp: Joi.string().max(6).required().messages({
@@ -51,7 +49,6 @@ const verifyNewMailSchema = Joi.object({
     "any.required": "OTP is required",
   }),
 });
-
 
 const contactSchema = Joi.object({
   fullName: Joi.string().min(3).required(),
@@ -62,6 +59,14 @@ const contactSchema = Joi.object({
   message: Joi.string().min(3).required(),
 });
 
+const createauthor = Joi.object({
+  name: Joi.string().min(3).required(),
+  bio: Joi.string().min(3).required(),
+  email: Joi.string().email().optional().messages({
+    "string.email": "Invalid email format",
+  }),
+  books: Joi.array().items(Joi.string().min(1)).min(1).required().messages({}),
+});
 
 module.exports = {
   signupSchema,
@@ -71,5 +76,6 @@ module.exports = {
   changeEmailSchema,
   verifyNewMailSchema,
   personalInfoSchema,
-  contactSchema
+  contactSchema,
+  createauthor,
 };
