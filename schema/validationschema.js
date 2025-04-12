@@ -71,7 +71,11 @@ const createauthor = Joi.object({
 const bookSchema = Joi.object({
   title: Joi.string().required(),
   description: Joi.string().required(),
-  cloudinaryUrl: Joi.string().uri().required(),
+  cloudinaryUrl: Joi.string().uri().required().messages({
+    'string.uri': '"cloudinaryUrl" must be a valid URL', // Custom error message
+    'string.empty': '"cloudinaryUrl" cannot be empty',  // Custom error for empty string
+    'any.required': '"cloudinaryUrl" is required', // Custom error for required field
+  }),
   keywords: Joi.array().items(Joi.string()).optional(),
   category: Joi.string().valid('OND', 'HND').required(),
   sub_category: Joi.string().valid('PROJECTS', 'LECTURE_NOTES', 'PAST_QUESTION', 'DEPARTMENTAL_PUBLICATIONS').required(),

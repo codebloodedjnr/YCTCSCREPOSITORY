@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const bookSchema = new mongoose.Schema({
   title: String,
   description: String,
-  cloudinaryUrl: String,
+  cloudinaryUrl: { type: String, unique: true, required: true },
   keywords: [String],
   cartegory: { type: String, enum: ['OND', 'HND']},
   sub_cartegory : { type: String, enum: ['PROJECTS', 'LECTURE_NOTES', "PAST_QUESTION", "DEPARTMENTAL_PUBLICATIONS"]},

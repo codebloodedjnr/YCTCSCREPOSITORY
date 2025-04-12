@@ -9,6 +9,9 @@ class BookController {
   // POST /books
   static async createBook(req, res) {
     try {
+      if (!isAdmin(req)) {
+        req.body.approved = false;
+      }
       const book = await BookService.createBook(req.body);
       res.status(201).json(book);
     } catch (error) {
