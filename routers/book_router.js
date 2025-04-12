@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const BookController = require('../controllers/book_controllers');
 const schema = require("../schema/validationschema");
-const { validate } = require('../models/otpmodel');
+const validate = require("../utils/validate");
+
 
 router.post(
     '/',
-    validate(schema.bookSchema, "body"), 
-    BookController.createBook
-);
+    validate(schema.bookSchema, 'body'),  // Validate the request body
+    BookController.createBook            // Then call the createBook controller
+  );
 
 router.get('/:id', BookController.getBookById);
 

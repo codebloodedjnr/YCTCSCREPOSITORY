@@ -27,7 +27,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/api/users", userRoutes);
 app.use("/api/books", middleware.verifyToken, bookRoutes);
 app.use("/api/authors", middleware.verifyToken, authRoutes);
-app.use("/api/authors", middleware.verifyToken, adminRoutes);
+app.use("/api/admin", middleware.verifyToken, adminRoutes);
 
 app.use(middleware.unknownEndpoint);
 app.use(middleware.errorHandler);
