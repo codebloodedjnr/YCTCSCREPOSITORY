@@ -367,12 +367,12 @@ const updatePersonalInfo = async (req, res, next) => {
       user.department = null;
       role = 'others'
     } else if (/^F\/(ND|HD)\/\d{2}\/\d+$/.test(studentStaffID)) {
-      user.role = 'student' 
+      role = 'student' 
     } else {
-      user.role = 'staff';
+      role = 'staff';
     }
 
-    if (user.role != 'others') {
+    if (role != 'others') {
       const existingUser = await userServices.findUserByOne(
         "studentStaffID", studentStaffID
       );

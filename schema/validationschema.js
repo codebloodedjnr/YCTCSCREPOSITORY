@@ -38,11 +38,12 @@ const personalInfoSchema = Joi.object({
 
 
 const changeEmailSchema = Joi.object({
-  email: Joi.string().email().required().messages({
+  studentStaffID: Joi.string().optional(),
+  email: Joi.string().email().optional().messages({
     "string.email": "Invalid email format",
     "any.required": "Email is required",
   }),
-});
+}).or('studentStaffID', 'email');;
 
 const verifyNewMailSchema = Joi.object({
   otp: Joi.string().max(6).required().messages({
@@ -51,6 +52,18 @@ const verifyNewMailSchema = Joi.object({
   }),
 });
 
+
+const contactSchema = Joi.object({
+  fullName: Joi.string().min(3).required(),
+  email: Joi.string().email().optional().messages({
+    "string.email": "Invalid email format",
+    "any.required": "Email is required",
+  }),
+  subject: Joi.string().min(3).required(),
+  message: Joi.string().min(3).required(),
+});
+
+
 module.exports = {
   signupSchema,
   verifyOTPSchema,
@@ -58,5 +71,6 @@ module.exports = {
   loginSchema,
   changeEmailSchema,
   verifyNewMailSchema,
-  personalInfoSchema
+  personalInfoSchema,
+  contactSchema
 };
