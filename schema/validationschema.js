@@ -4,6 +4,7 @@ const signupSchema = Joi.object({
   studentStaffID: Joi.string().required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
+  department: Joi.string().min(3).required(),
   confirmPassword: Joi.string()
     .valid(Joi.ref("password"))
     .required()
@@ -12,28 +13,38 @@ const signupSchema = Joi.object({
 
 const verifyOTPSchema = Joi.object({
   studentStaffID: Joi.string().optional(),
+  email: Joi.string().email().optional(),
   otp: Joi.string().length(6).required().messages({
     "string.length": "OTP must be exactly 6 characters",
   }),
-});
+}).or('studentStaffID', 'email');
 
 const resendOTPSchema = Joi.object({
-  studentStaffID: Joi.string().required(),
-});
+  studentStaffID: Joi.string().optional(),
+  email: Joi.string().email().optional()
+}).or('studentStaffID', 'email');
 
 const loginSchema = Joi.object({
+  studentStaffID: Joi.string().optional(),
   email: Joi.string().email().optional(),
   password: Joi.string().min(6).required(),
+}).or('studentStaffID', 'email');
+
+
+const personalInfoSchema = Joi.object({
+  studentStaffID: Joi.string().optional().empty('').default(null),
+  department: Joi.string().optional(),
 });
 
-const changeemailSchema = Joi.object({
+
+const changeEmailSchema = Joi.object({
   email: Joi.string().email().required().messages({
     "string.email": "Invalid email format",
     "any.required": "Email is required",
   }),
 });
 
-const verifynewmail = Joi.object({
+const verifyNewMailSchema = Joi.object({
   otp: Joi.string().max(6).required().messages({
     "string.max": "OTP must not exceed 6 characters",
     "any.required": "OTP is required",
@@ -45,6 +56,7 @@ module.exports = {
   verifyOTPSchema,
   resendOTPSchema,
   loginSchema,
-  changeemailSchema,
-  verifynewmail,
+  changeEmailSchema,
+  verifyNewMailSchema,
+  personalInfoSchema
 };

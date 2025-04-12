@@ -58,25 +58,39 @@ const contact = async (req, res, next) => {
 // Signup New User
 const signup = async (req, res) => {
   try {
-    const { studentStaffID, email, password, confirmPassword } = req.body;
+    let { studentStaffID, email, password, confirmPassword, department } = req.body;
+
+    studentStaffID = studentStaffID.trim();
+    email = email.trim();
+    password = password.trim();
+    confirmPassword = confirmPassword.trim();
+    department = department.trim();
+
 
     // Validate input
-    if (!studentStaffID || !email || !password || !confirmPassword) {
-      return res.status(400).json({ message: "All fields are required." });
+    if (!email || !password || !confirmPassword) {
+      return res.status(400).json({ message: "Missing a required field." });
     }
 
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Passwords do not match." });
+    if (!studentStaffID) {
+      studentStaffID = null;
+      department = null;
+      role = 'others'
+    } else if (/^F\/(ND|HD)\/\d{2}\/\d+$/.test(studentStaffID)) {
+      role = 'student' 
+    } else {
+      role = 'staff';
     }
 
-    // Check if user already exists (by studentStaffID or email)
-    const existingUser = await userServices.findUserByOne("$or", [
-      { studentStaffID },
-      { email },
-    ]);
+    if (role != 'others') {
+      const existingUser = await userServices.findUserByOne("$or", [
+        { studentStaffID },
+        { email },
+      ]);
 
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists." });
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email or Id already exists." });
+      }
     }
 
     // Hash password
@@ -88,7 +102,8 @@ const signup = async (req, res) => {
       studentStaffID,
       email,
       password: hashedPassword,
-      isVerified: false,
+      department,
+      role
     });
 
     // Generate OTP
@@ -112,18 +127,25 @@ const signup = async (req, res) => {
 // Verify OTP
 const verifyOtp = async (req, res) => {
   try {
-    const { studentStaffID, otp } = req.body;
+    const { studentStaffID, otp, email } = req.body;
 
     // Validate input
-    if (!studentStaffID || !otp) {
-      return res.status(400).json({ message: "All fields are required." });
+    if (!(studentStaffID || email) && !otp) {
+      return res.status(400).json({ message: "All required fields are expected to be filled." });
     }
 
     // Find user by studentStaffID
-    const user = await userServices.findUserByOne(
+    let user = await userServices.findUserByOne(
       "studentStaffID",
       studentStaffID
     );
+
+    // Find user by email
+    if (!user) {
+      user = await userServices.findUserByOne("email", email);
+    }
+
+    // User not found
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
@@ -164,21 +186,27 @@ const verifyOtp = async (req, res) => {
 // Resend OTP
 const resendOTPCode = async (req, res, next) => {
   try {
-    const { studentStaffID } = req.body;
+    const { studentStaffID, email } = req.body;
 
     // Validate input
-    if (!studentStaffID) {
+    if (!(studentStaffID || email)) {
       return res.status(400).json({
         status: "error",
-        message: "Student/Staff ID is required.",
+        message: "Student/Staff ID or Email is required.",
       });
     }
 
     // Find user by studentStaffID
-    const user = await userServices.findUserByOne(
+    let user = await userServices.findUserByOne(
       "studentStaffID",
       studentStaffID
     );
+
+    // Find user by email
+    if (!user) {
+      user = await userServices.findUserByOne("email", email);
+    }
+
     if (!user) {
       return res.status(404).json({
         status: "error",
@@ -209,10 +237,10 @@ const resendOTPCode = async (req, res, next) => {
 // Login User
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, studentStaffID, password } = req.body;
 
     // Validate input
-    if (!email || !password) {
+    if (!(email || studentStaffID) && !password) {
       return res.status(400).json({
         status: "error",
         message: "Email and password are required",
@@ -220,7 +248,13 @@ const login = async (req, res, next) => {
     }
 
     // Find user by email
-    const user = await userServices.findUserByOne("email", email);
+    let user = await userServices.findUserByOne("email", email);
+
+    //Find user by studentStaffID
+    if (!user) {
+      user = await userServices.findUserByOne("studentStaffID", studentStaffID);
+    }
+
     if (!user) {
       return res.status(404).json({
         status: "error",
@@ -249,7 +283,7 @@ const login = async (req, res, next) => {
     // Generate JWT token
     const token = jwt.sign(
       { id: user._id, email: user.email },
-      config.JWT_SECRET,
+      config.SECRET,
       { expiresIn: "7d" } // Token expires in 7 days
     );
 
@@ -275,7 +309,7 @@ const login = async (req, res, next) => {
 //Get Users Personalinfo ?? working
 const personalInfo = async (req, res, next) => {
   try {
-    const user = await userServices.findUserByOne("_id", req.user.id);
+    const user = await userServices.findUserByOne("_id", req.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -293,6 +327,8 @@ const personalInfo = async (req, res, next) => {
         department: user.department,
         isVerified: user.isVerified,
         createdAt: user.createdAt,
+        role: user.role,
+        approved: user.approved,
       },
     });
   } catch (err) {
@@ -303,9 +339,10 @@ const personalInfo = async (req, res, next) => {
 
 // Update user personalinfo
 const updatePersonalInfo = async (req, res, next) => {
-  const { department } = req.body; // Only department can be updated
+  logger.info("Settings/updatePersonalInfo");
+  let { department, studentStaffID } = req.body; // Only department can be updated
   try {
-    let user = await userServices.findUserById(req.user.id);
+    let user = await userServices.findUserById(req.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -315,8 +352,36 @@ const updatePersonalInfo = async (req, res, next) => {
     }
 
     // Update department if provided
-    user.department = department || user.department;
+    if (user.approved){
+      return res.status(400).json({
+        status: "error",
+        message: "Attempting to update an already approved account",
+      });
+    }
 
+    user.department = department || user.department;
+    user.studentStaffID = studentStaffID;
+
+    if (!studentStaffID) {
+      user.studentStaffID = null;
+      user.department = null;
+      role = 'others'
+    } else if (/^F\/(ND|HD)\/\d{2}\/\d+$/.test(studentStaffID)) {
+      user.role = 'student' 
+    } else {
+      user.role = 'staff';
+    }
+
+    if (user.role != 'others') {
+      const existingUser = await userServices.findUserByOne(
+        "studentStaffID", studentStaffID
+      );
+
+      if (existingUser && !existingUser._id.equals(user._id)) {
+        return res.status(400).json({ message: "User with this  Id already exists." });
+      }
+    }
+    user.role = role;
     await user.save();
 
     return res.status(200).json({
@@ -344,7 +409,7 @@ const changeEmail = async (req, res, next) => {
     }
 
     // Find the authenticated user
-    const user = await userServices.findUserByOne("_id", req.user.id);
+    const user = await userServices.findUserByOne("_id", req.userId);
     if (!user) {
       return res.status(404).json({
         status: "error",
@@ -353,7 +418,7 @@ const changeEmail = async (req, res, next) => {
     }
 
     // Mark user as unverified and update email
-    user.verified = false;
+    user.isVerified = false;
     user.email = email;
     await user.save();
 
@@ -378,7 +443,7 @@ const verifyNewMail = async (req, res, next) => {
   const { otp } = req.body;
 
   try {
-    const userOtpRecord = await otpServices.findUserOtpByUserId(req.user.id);
+    const userOtpRecord = await otpServices.findUserOtpByUserId(req.userId);
     if (!userOtpRecord) {
       return res.status(403).json({
         status: "error",
@@ -390,7 +455,7 @@ const verifyNewMail = async (req, res, next) => {
 
     // Check if OTP has expired
     if (Date.now() > expiresat) {
-      await otpServices.deleteUserOtpsByUserId(req.user.id);
+      await otpServices.deleteUserOtpsByUserId(req.userId);
       return res.status(400).json({
         status: "error",
         message: "OTP has expired",
@@ -407,10 +472,10 @@ const verifyNewMail = async (req, res, next) => {
     }
 
     // Mark user as verified
-    await userServices.updateUserByOne(req.user.id);
+    await userServices.updateUserByOne(req.userId);
 
     // Delete OTP record after successful verification
-    await otpServices.deleteUserOtpsByUserId(req.user.id);
+    await otpServices.deleteUserOtpsByUserId(req.userId);
 
     return res.status(200).json({
       status: "success",
@@ -422,10 +487,47 @@ const verifyNewMail = async (req, res, next) => {
   }
 };
 
+
+const ApproveUser = async (req, res, next) => {
+  try {
+    const { approved, studentId } = req.body;
+    const admin = await userServices.findUserById(req.userId)
+    const  user = await findUserById(studentId);
+    if (!admin) {
+      return res.status(400).json({
+        status: "error",
+        message: "Admin not found",
+      });
+    }
+    if (!user) {
+      return res.status(400).json({
+        status: "error",
+        message: "User not found",
+      });
+    }
+    if (admin.role !== "admin") {
+      return res.status(400).json({
+        status: "error",
+        message: "User has no Access",
+      });
+    }
+
+    user.approved = approved;
+    await user.save();
+    return res.status(200).json({
+      status: "success",
+      message: "User approved successfully",
+    });
+  } catch (err) {
+    logger.error("user/ApproveUser: ", err);
+    next(err);
+  }
+};
+
 //Logout Users
 const logout = async (req, res, next) => {
   try {
-    await redisService.delArray(req.user.id);
+    await redisService.delArray(req.userId);
 
     return res.status(200).json({
       status: "success",
@@ -448,4 +550,5 @@ module.exports = {
   changeEmail,
   verifyNewMail,
   contact,
+  ApproveUser,
 };

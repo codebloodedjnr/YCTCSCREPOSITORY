@@ -5,6 +5,7 @@ const userServices = require("../services/userservice");
 // const redisService = require("../services/redisService");
 
 const verifyToken = async (req, res, next) => {
+  logger.info("Middleware/verifyToken");
   try {
     const token = req.header("Authorization").replace("Bearer ", "");
     if (!token) {
@@ -14,14 +15,14 @@ const verifyToken = async (req, res, next) => {
       });
     }
     const decoded = jwt.verify(token, config.SECRET);
-    const user = await userServices.findUserByOne("_id", decoded.userId);
+    let user = await userServices.findUserByOne("_id", decoded.id);
     if (!user) {
       return res.status(403).json({
         status: "error",
         message: "Failed to authenticate token",
       });
     }
-    req.userId = decoded.userId;
+    req.userId = decoded.id;
     // let redistoken = await redisService.getArray(req.userId);
     // if (!(redistoken[0] == token || redistoken[1] == token)) {
     //   return res.status(403).json({
@@ -56,46 +57,40 @@ const requestLogger = (request, response, next) => {
 
 const errorHandler = (error, request, response, next) => {
   // logger.error(error.name);
+  logger.error(error.message);
   if (error.name === "CastError") {
     return response.status(400).json({
       status: "error",
       message: "improper arguments passed through",
     });
-  } else if (error.name === "ValidationError") {
+  } 
+  if (error.name === "ValidationError") {
     return response.status(400).json({
       status: "error",
       message: error.message,
     });
-  } else if (error.name === "SyntaxError") {
+  }
+  if (error.name === "SyntaxError") {
     return response.status(400).json({
       status: "error",
       message: "Syntax Error",
     });
-  } else if (error.name === "ReferenceError") {
+  }
+  if (error.name === "ReferenceError") {
     return response.status(500).json({
       status: "error",
       message: "Internal Server Error",
     });
-  } else if (error.status == 400) {
-    return response.status(400).json({
-      status: "error",
-      message: error.message,
-    });
-  } else if (error.status == 404) {
-    return response.status(500).json({
-      status: "error",
-      message: error.message,
-    });
-  } else if (error.status == 500) {
-    return response.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
-  }
-  next(error);
+  } 
+
+  // Fallback for unknown errors
+  return response.status(500).json({
+    status: "error",
+    message: "Something went wrong",
+  });
 };
 
-const unknownEndpoint = (err, req, res, next) => {
+const unknownEndpoint = (req, res) => {
   return res.status(404).json({
     status: "error",
     message: "Unknown endpoint",

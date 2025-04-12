@@ -43,22 +43,7 @@ const createUser = async (userData) => {
 
 const updateUserByOne = async (userId) => {
   try {
-    const user = await User.updateOne({ _id: userId }, { verified: true });
-    logger.info(`User profile successfully updated ${userId}`);
-  } catch (err) {
-    logger.error(err);
-    const error = new Error("Internal Server Error");
-    error.status = 500;
-    throw error;
-  }
-};
-
-const updateUserPhoneByOne = async (userId) => {
-  try {
-    const user = await User.updateOne(
-      { _id: userId },
-      { whatsappverified: true }
-    );
+    const user = await User.updateOne({ _id: userId }, { isVerified: true });
     logger.info(`User profile successfully updated ${userId}`);
   } catch (err) {
     logger.error(err);
@@ -72,6 +57,5 @@ module.exports = {
   findUserByOne,
   createUser,
   updateUserByOne,
-  updateUserPhoneByOne,
   findUserById,
 };

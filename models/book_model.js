@@ -7,6 +7,7 @@ const bookSchema = new mongoose.Schema({
   keywords: [String],
   authors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Author' }],
   cartegory: { type: String, enum: ['OND', 'HND']},
+  sub_cartegory : { type: String, enum: ['PROJECTS', 'LECTURE_NOTES', "PAST_QUESTION", "DEPARTMENTAL_PUBLICATIONS"]},
   downloadCount: { type: Number, default: 0 },
   file_size: { type: Number, default: 0 },
   approved: { type: Boolean, default: false },

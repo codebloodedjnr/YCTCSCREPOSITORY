@@ -27,8 +27,9 @@ app.use("/api/users", userRoutes);
 app.use("/api/books", middleware.verifyToken, bookRoutes);
 app.use("/api/authors", middleware.verifyToken, authRoutes);
 
-app.use(middleware.errorHandler);
 app.use(middleware.unknownEndpoint);
+app.use(middleware.errorHandler);
+
 
 // Export the app for use in index.js or server.js
 module.exports = app;
