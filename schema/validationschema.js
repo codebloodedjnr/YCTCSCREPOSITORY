@@ -57,7 +57,6 @@ const contactSchema = Joi.object({
   fullName: Joi.string().min(3).required(),
   email: Joi.string().email().optional().messages({
     "string.email": "Invalid email format",
-    "any.required": "Email is required",
   }),
   subject: Joi.string().min(3).required(),
   message: Joi.string().min(3).required(),
