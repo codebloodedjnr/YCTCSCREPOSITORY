@@ -1,6 +1,7 @@
-const { Logger } = require('logger');
+const logger = require('logger');
 const BookService = require('../services/book_service');
 const emailServices = require("../services/emailservice");
+const userServices = require("../services/userservice");
 
 function isAdmin(req) {
   return req.user && req.user.role === 'admin';
@@ -12,6 +13,10 @@ class BookController {
     try {
       if (!isAdmin(req)) {
         req.body.approved = false;
+      }
+      const user = await userServices.findUserByOne("_id", req.userId);
+      if (!user.approved){
+        return res.status(403).json({ error: 'You are not approved' });
       }
       const book = await BookService.createBook(req.body);
       res.status(201).json(book);
@@ -30,6 +35,7 @@ class BookController {
       }  
       res.json(book);
     } catch (error) {
+      console.log(error);
       res.status(500).json({ error: 'Failed to fetch book' });
     }
   }
@@ -41,6 +47,7 @@ class BookController {
       const books = await BookService.getAllBooks(filter);
       res.json(books);
     } catch (error) {
+      console.log(error);
       res.status(500).json({ error: 'Failed to fetch books' });
     }
   }
@@ -56,8 +63,8 @@ class BookController {
     }
 
     // Only admin can change the approved field
-    if (!isAdmin(req)) {
-      delete req.body.approved;
+    if (!isAdmin(req) || book.uploadedBy != req.userId) {
+      return res.status(403).json({ error: 'You are not authorized to edit this book' });
     }
 
       const updated = await BookService.updateBookById(req.params.id, req.body);
@@ -76,19 +83,17 @@ class BookController {
       const book = await BookService.getBookById(req.params.id);
 
       // Only admin can update if book is approved
-      if (book.approved && !isAdmin(req)) {
+      if (book && book.approved && !isAdmin(req)) {
         return res.status(403).json({ error: 'Only admins can modify approved books' });
       }
     
       // Only admin can change the approved field
-      if (!isAdmin(req)) {
-        delete req.body.approved;
+      if (!isAdmin(req) || book.uploadedBy != req.userId) {
+        return res.status(403).json({ error: 'You are not authorized to delete this book' });
       }
 
       const result = await BookService.deleteBookById(req.params.id);
-      if (result.deletedCount === 0) return res.status(404).json({ error: 'Book not found' });
-      const deleted = await BookService.deleteBookById(req.params.id);
-      if (!deleted) return res.status(404).json({ error: 'Book not found' });
+      // if (result.deletedCount === 0) return res.status(404).json({ error: 'Book not found' });
 
       res.json({ message: 'Book deleted successfully' });
     } catch (error) {
@@ -111,10 +116,25 @@ class BookController {
     }
   }
 
-  static async findBooksByAuthor(authorId, filter = {}) {
-    return Book.find({ authors: authorId, ...filter });
+  static async rejectBookById(req, res) {
+    try {
+      if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+      const book = await BookService.getBookById(req.params.id);
+
+      await emailServices.sendRejectedEmailToContributors(book, req.body.reason);
+
+      const deleted = await BookService.deleteBookById(req.params.id);
+      if (deleted.deletedCount === 0) return res.status(404).json({ error: 'Book not found' });
+      // 🔔 Notify contributors
+    
+      res.json({ message: 'Book Rejected'});
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to approve book' });
+    }
   }
 
-}
+  static async 
+  
 
+}
 module.exports = BookController;

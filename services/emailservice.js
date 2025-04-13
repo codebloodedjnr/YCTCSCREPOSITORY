@@ -86,4 +86,33 @@ async function sendApprovalEmailToContributors(book) {
 }
 
 
-module.exports = { sendOtpEmail, sendEmail, sendApprovalEmailToContributors };
+async function sendRejectedEmailToContributors(book, reason) {
+  const users = await Users.find({ _id: { $in: book.contributors } });
+
+  const emails = users.map(u => u.email).filter(Boolean);
+
+  const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+      user: config.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  for (const email of emails) {
+    await transporter.sendMail({
+      from: config.EMAIL_USER,
+      to: email,
+      subject: '✅ Your Book Has Been Rejected!',
+      html: `
+        <p>Hi there,</p>
+        <p>Your book <strong>${book.title}</strong> has just been rejected by an admin and is no longer available in the repository.</p>
+        <p>Reason: ${reason}</p>
+        <p>Thanks for sharing knowledge!</p>
+      `,
+    });
+  }
+}
+
+
+module.exports = { sendOtpEmail, sendEmail, sendApprovalEmailToContributors, sendRejectedEmailToContributors };

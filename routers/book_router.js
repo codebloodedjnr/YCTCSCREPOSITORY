@@ -25,4 +25,10 @@ router.patch(
     BookController.approveBookById
 );
 
+router.patch(
+    '/:id/reject', 
+    validate(schema.approveBookSchema, "body"), 
+    BookController.rejectBookById
+);
+
 module.exports = router;

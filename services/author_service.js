@@ -12,6 +12,10 @@ class AuthorService {
     return await Author.findById(id).populate('books');
   }
 
+  static async getAuthorByEmail(email) {
+    return await Author.findOne({ email: email }).populate('books');
+  }
+
   // Get all authors
   static async getAllAuthors() {
     return await Author.find().populate('books');

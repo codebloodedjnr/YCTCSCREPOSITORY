@@ -10,6 +10,10 @@ const bookSchema = new mongoose.Schema({
   downloadCount: { type: Number, default: 0 },
   file_size: { type: Number, default: 0 },
   approved: { type: Boolean, default: false },
+  author: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Author',
+  }],
   uploadedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }]  // ✅ link to User
 });
 
