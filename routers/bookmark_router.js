@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const BookmarkController = require('../controllers/bookmark_controllers');
-const middleware = require('../utils/middleware'); // Make sure user is authenticated
+// const middleware = require('../utils/middleware'); // Make sure user is authenticated
+const schema = require('../schema/validationschema');
+const validate = require('../utils/validate');
+
 
 // Protect routes with authentication middleware
-router.post('/bookmark', middleware.verifyToken, BookmarkController.createBookmark);
-router.get('/bookmarks', middleware.verifyToken, BookmarkController.getUserBookmarks);
-router.delete('/bookmark/:bookId', middleware.verifyToken, BookmarkController.removeBookmark);
+router.post('', validate(schema.bookmarkSchema, 'body'), BookmarkController.createBookmark);
+router.get('', BookmarkController.getUserBookmarks);
+router.delete('/:bookmarkId', BookmarkController.removeBookmark);
 
 module.exports = router;

@@ -1,9 +1,16 @@
-const User = require("../models/user.model");
+const User = require("../models/usermodel");
 
 class AdminService {
-  async getAllUsers() {
+  async getAllUsers(approved) {
     try {
-      return await User.find({});
+        let filter = {};
+    
+        if (approved !== undefined) {
+          // Convert string "true"/"false" to boolean
+          filter.approved = approved === 'true';
+        }
+    
+        return await User.find(filter);
     } catch (err) {
       throw new Error("Error retrieving users: " + err.message);
     }
@@ -17,9 +24,11 @@ class AdminService {
     }
   }
 
-  async promoteToAdmin(userId) {
+  async alterUserRole(userId, role) {
+
+    console.log("++++++++++", role)
     try {
-      return await User.findByIdAndUpdate(userId, { role: "admin" }, { new: true });
+      return await User.findByIdAndUpdate(userId, { role: role }, { new: true });
     } catch (err) {
       throw new Error("Error promoting user to admin: " + err.message);
     }
@@ -30,6 +39,22 @@ class AdminService {
       return await User.findByIdAndDelete(userId);
     } catch (err) {
       throw new Error("Error deleting user: " + err.message);
+    }
+  }
+
+  async getAllUnapprovedBooks() {
+    try {
+      return await Book.find({ approved: false });
+    } catch (err) {
+      throw new Error("Error retrieving unapproved books: " + err.message);
+    }
+  }
+
+  async searchUser(query) {
+    try {
+      return await User.find({ $text: { $search: query } });
+    } catch (err) {
+      throw new Error("Error searching users: " + err.message);
     }
   }
 }

@@ -89,6 +89,12 @@ const bookSchema = Joi.object({
   uploadedBy: Joi.array().items(Joi.string().length(24).hex()).required()  // assuming user IDs are ObjectIds (24 hex characters)
 });
 
+const bookmarkSchema = Joi.object({
+  bookId: Joi.string().min(1).min(1).required().messages({
+    "message": "At least one book is required",
+  })
+});
+
 module.exports = {
   signupSchema,
   verifyOTPSchema,
@@ -99,5 +105,6 @@ module.exports = {
   personalInfoSchema,
   contactSchema,
   authorSchema,
-  bookSchema
+  bookSchema,
+  bookmarkSchema
 };

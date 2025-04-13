@@ -31,8 +31,8 @@ class BookService {
 
 
     // Admin Approve a Book
-    static async approveBook(req) {
-        return await Book.findByIdAndUpdate(req.params.id, { approved: true });
+    static async approveBook(id) {
+        return await Book.findByIdAndUpdate(id, { approved: true });
   }
 
   static async findBooksByAuthor(authorId, filter) {

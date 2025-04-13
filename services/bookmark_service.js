@@ -38,12 +38,9 @@ class BookmarkService {
   }
 
   // Remove a bookmark
-  static async removeBookmark(userId, bookId) {
+  static async removeBookmark(bookmarkId) {
     try {
-      const bookmark = await Bookmark.findOneAndDelete({ user: userId, book: bookId });
-      if (!bookmark) {
-        throw new Error('Bookmark not found');
-      }
+      const bookmark = await Bookmark.findOneAndDelete({ _id: bookmarkId });
       return bookmark;
     } catch (error) {
       throw error; // Will be caught by the controller

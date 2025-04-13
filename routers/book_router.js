@@ -20,14 +20,12 @@ router.put('/:id', BookController.updateBookById);
 router.delete('/:id', BookController.deleteBookById);
 
 router.patch(
-    '/:id/approve', 
-    validate(schema.approveBookSchema, "body"), 
+    '/:id/approve',
     BookController.approveBookById
 );
 
 router.patch(
-    '/:id/reject', 
-    validate(schema.approveBookSchema, "body"), 
+    '/:id/reject',
     BookController.rejectBookById
 );
 

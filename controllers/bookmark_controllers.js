@@ -7,6 +7,10 @@ class BookmarkController {
       const { bookId } = req.body;
       const userId = req.user._id; // Assuming the user is authenticated and added to req.user
 
+      let bookmarks = await BookmarkService.getUserBookmarks(userId);
+      if (bookmarks.some((bookmark) => bookmark.book.toString() === bookId)) {
+        return res.status(400).json({ error: 'Book already bookmarked' });
+      }
       const bookmark = await BookmarkService.createBookmark(userId, bookId);
       res.status(201).json({ message: 'Book bookmarked successfully', bookmark });
     } catch (err) {
@@ -33,10 +37,7 @@ class BookmarkController {
   // DELETE /bookmark/:bookId
   static async removeBookmark(req, res) {
     try {
-      const { bookId } = req.params;
-      const userId = req.user._id; // Get the authenticated user's ID
-
-      await BookmarkService.removeBookmark(userId, bookId);
+      await BookmarkService.removeBookmark(req.params.bookmarkId);
       res.json({ message: 'Bookmark removed successfully' });
     } catch (err) {
       res.status(500).json({ error: err.message });

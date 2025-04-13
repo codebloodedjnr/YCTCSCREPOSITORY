@@ -6,8 +6,9 @@ const logger = require("./utils/logger");
 const userRoutes = require("./routers/userrouters");
 const bookRoutes = require("./routers/book_router");
 const authRoutes = require("./routers/author_router");
-const adminRoutes = require("./routers/author_router");
+const adminRoutes = require("./routers/admin_routes");
 const middleware = require("./utils/middleware");
+const bookmark = require("./routers/bookmark_router");
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/books", middleware.verifyToken, bookRoutes);
 app.use("/api/authors", middleware.verifyToken, authRoutes);
 app.use("/api/admin", middleware.verifyToken, adminRoutes);
+app.use("/api/bookmarks", middleware.verifyToken, bookmark);
 
 app.use(middleware.unknownEndpoint);
 app.use(middleware.errorHandler);

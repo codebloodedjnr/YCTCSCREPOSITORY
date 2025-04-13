@@ -66,7 +66,7 @@ async function sendApprovalEmailToContributors(book) {
     service: 'Gmail',
     auth: {
       user: config.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      pass: config.EMAIL_PASS,
     },
   });
 
@@ -95,7 +95,7 @@ async function sendRejectedEmailToContributors(book, reason) {
     service: 'Gmail',
     auth: {
       user: config.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      pass: config.EMAIL_PASS,
     },
   });
 

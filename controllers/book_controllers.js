@@ -18,9 +18,15 @@ class BookController {
       if (!user.approved){
         return res.status(403).json({ error: 'You are not approved' });
       }
+
+      let books = await BookService.getAllBooks();
+      if (books.some((book) => book.cloudinaryUrl === req.body.cloudinaryUrl)) {
+        return res.status(400).json({ error: 'Book with this url already exists' });
+      }
       const book = await BookService.createBook(req.body);
       res.status(201).json(book);
     } catch (error) {
+      console.log(error);
       res.status(500).json({ error: 'Failed to create book' });
     }
   }
@@ -112,6 +118,7 @@ class BookController {
     
       res.json({ message: 'Book approved', book: updated });
     } catch (err) {
+        console.log(err);
         res.status(500).json({ error: 'Failed to approve book' });
     }
   }

@@ -23,6 +23,7 @@ const verifyToken = async (req, res, next) => {
       });
     }
     req.userId = decoded.id;
+    req.user = user;
     // let redistoken = await redisService.getArray(req.userId);
     // if (!(redistoken[0] == token || redistoken[1] == token)) {
     //   return res.status(403).json({
@@ -113,4 +114,5 @@ module.exports = {
   errorHandler,
   unknownEndpoint,
   verifyToken,
+  authorizeRole,
 };
